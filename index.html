@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#25497f">
+<title>Caderno de fiado</title>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f4ee;--ink:#1c2733;--mut:#64707c;--ln:#cfdae6;--card:#fbfcf9;--ac:#25497f;--on:#fff;--neg:#b8372f;--ok:#2c7a57;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#141a21;--ink:#e6ebf0;--mut:#93a0ad;--ln:#2a3948;--card:#1b232c;--ac:#8db2e8;--on:#10161c;--neg:#ef8077;--ok:#6cc79c}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+body{margin:0;font:16px/1.45 'Familjen Grotesk',system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;justify-content:space-between;align-items:center;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;border-bottom:1px solid var(--ln)}
+main,.card{max-width:640px;margin:0 auto;padding:8px 16px 110px}
+.card{padding-top:40px}
+h1,h2{font-weight:700;margin:18px 0 6px}h1{font-size:26px}h2{font-size:18px}
+nav{position:fixed;inset:auto 0 0;display:flex;background:var(--card);border-top:1px solid var(--ln);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;border:0;background:none;padding:12px;font:inherit;font-weight:500;color:var(--mut);border-radius:8px}
+nav button.on{color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+.hero{padding:18px 0 8px}.hero strong{display:block;font-size:44px;line-height:1.1;font-variant-numeric:tabular-nums}
+.sub{display:flex;gap:16px;flex-wrap:wrap;align-items:center;color:var(--mut);margin-top:6px}
+small{display:block;color:var(--mut);font-size:14px}
+ul.ruled{list-style:none;margin:0;padding:0;border-left:2px solid color-mix(in srgb,var(--neg) 50%,transparent)}
+.ruled li{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--ln)}
+.ruled li>a,.ruled li>span:first-child{flex:1;cursor:pointer}
+.mut{color:var(--mut)}.neg{color:var(--neg)}
+label{display:block;margin:10px 0;font-size:14px;color:var(--mut)}
+input,select,button{font:inherit}
+input,select{width:100%;margin-top:4px;padding:10px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--ink)}
+button,a.wa{border:1px solid var(--ln);background:var(--card);color:var(--ink);padding:9px 14px;border-radius:8px;cursor:pointer;text-decoration:none;font-size:15px}
+button.pri{background:var(--ac);color:var(--on);border-color:var(--ac);font-weight:700}
+a.wa{color:var(--ok);border-color:var(--ok)}
+.lk{border:0;background:none;color:var(--ac);padding:8px 0;cursor:pointer}
+.row{display:flex;gap:10px;align-items:end}.row>label{flex:1;margin:10px 0}.row>button{margin-bottom:10px}
+.chk{display:flex;gap:8px;align-items:center}.chk input{width:auto;margin:0}
+dialog{border:1px solid var(--ln);border-radius:12px;background:var(--card);color:var(--ink);width:min(92vw,460px)}
+#toast{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:12px 14px;border-radius:8px;text-align:center}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</head>
+<body>
+<div id="app"></div><dialog id="dg"></dialog><div id="toast" hidden></div>
+<script>
+const SB=supabase.createClient('https://gjgctekqcqhrqmiyudcu.supabase.co','sb_publishable_Mbb2yescTxQt5DsbVsUnWA_IFQerk6l');
+const $=s=>document.querySelector(s),app=$('#app');
+const R=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const D=s=>new Date(s+'T12:00').toLocaleDateString('pt-BR');
+const E=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const iso=d=>d.toISOString().slice(0,10);
+const M={pix:'Pix',cash:'Dinheiro',card:'Cartão',bank_transfer:'Transferência',other:'Outra'};
+let ORG,ADM,CU=[],FD=[];
+const toast=m=>{const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,4500)};
+const run=async p=>{const r=await p;if(r.error){toast(r.error.message);throw r.error}return r.data};
+const od=h=>{$('#dg').innerHTML=h;$('#dg').showModal()};
+const wa=(c,v)=>{let n=(c.whatsapp||'').replace(/\D/g,'');if(!n)return'';if(n.length<=11)n='55'+n;return 'https://wa.me/'+n+'?text='+encodeURIComponent('Olá '+(c.nickname||c.full_name)+', tudo bem? Passando para lembrar do seu saldo em aberto de '+R(v)+', já com os juros de atraso. Pode me confirmar o pagamento?')};
+async function cust(f){if(f||!CU.length)CU=await run(SB.from('customers').select('id,full_name,nickname,whatsapp,address').eq('organization_id',ORG).eq('status','active').order('full_name'));return CU}
+
+async function boot(){
+ const {data:{session}}=await SB.auth.getSession();
+ if(!session)return login();
+ const m=await run(SB.from('organization_members').select('organization_id,role').limit(1));
+ if(!m.length)return setup();
+ ORG=m[0].organization_id;ADM=['owner','admin'].includes(m[0].role);shell();
+}
+function login(){app.innerHTML=`<form class="card" onsubmit="doLogin(event)"><h1>Caderno de fiado</h1><label>E-mail<input name="e" type="email" required autocomplete="username"></label><label>Senha<input name="p" type="password" required autocomplete="current-password"></label><button class="pri">Entrar</button></form>`}
+async function doLogin(ev){ev.preventDefault();const f=ev.target;const {error}=await SB.auth.signInWithPassword({email:f.e.value,password:f.p.value});if(error)return toast('E-mail ou senha incorretos.');boot()}
+function setup(){app.innerHTML=`<div class="card"><h1>Criar o negócio</h1><p class="mut">Seu usuário ainda não faz parte de nenhum negócio. Se já existe um, peça ao administrador para adicionar o seu e-mail.</p><label>Nome do negócio<input id="on"></label><button class="pri" onclick="mk()">Criar negócio</button></div>`}
+async function mk(){await run(SB.rpc('create_organization',{p_name:$('#on').value}));boot()}
+function shell(){app.innerHTML=`<header><b>Caderno de fiado</b><button class="lk" onclick="SB.auth.signOut().then(boot)">Sair</button></header><main id="v"></main><nav>${[['cobr','Cobrar'],['cli','Clientes'],['venda','Vender']].map(([k,l])=>`<button data-k="${k}" onclick="go('${k}')">${l}</button>`).join('')}</nav>`;go('cobr')}
+async function go(k,a){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.k==(k=='fic'?'cli':k)));$('#v').innerHTML='<p class="mut">Carregando…</p>';scrollTo(0,0);try{await({cobr:vCobr,cli:vCli,venda:vVenda,fic:vFic})[k](a)}catch(e){console.error(e)}}
+
+async function vCobr(){
+ const [s,du,cu,o]=await Promise.all([run(SB.from('dashboard_summary').select('*').eq('organization_id',ORG).maybeSingle()),run(SB.from('installment_dues').select('customer_id,total_to_collect,days_overdue').eq('organization_id',ORG).eq('payment_status','overdue').gt('balance',0)),cust(),run(SB.from('organizations').select('late_interest_daily_pct').eq('id',ORG).single())]);
+ const g={};du.forEach(x=>{const a=g[x.customer_id]??={t:0,d:0,n:0};a.t+=+x.total_to_collect;a.d=Math.max(a.d,x.days_overdue);a.n++});
+ const rows=Object.entries(g).sort((a,b)=>b[1].d-a[1].d).map(([id,a])=>{const c=cu.find(x=>x.id==id)||{full_name:'Cliente'},w=wa(c,a.t);return `<li><a onclick="go('fic','${id}')"><b>${E(c.nickname||c.full_name)}</b><small>${a.n} parcela(s), ${a.d} dias de atraso</small></a><span class="neg">${R(a.t)}</span>${w?`<a class="wa" href="${w}" target="_blank" rel="noopener">WhatsApp</a>`:''}</li>`}).join('');
+ $('#v').innerHTML=`<section class="hero"><small>Total a receber, sem juros de atraso</small><strong>${R(s?.total_receivable)}</strong><div class="sub"><span class="neg">${R(s?.overdue_amount)} em atraso</span><span>${R(s?.total_received)} já recebido</span></div></section><h2>Cobrar hoje</h2><ul class="ruled">${rows||'<li class="mut">Nenhuma parcela em atraso. Tudo em dia.</li>'}</ul>${ADM?`<h2>Ajustes</h2><div class="row"><label>Juros de atraso (% ao dia)<input id="jp" type="number" step="0.01" min="0" value="${o.late_interest_daily_pct}"></label><button onclick="sj()">Salvar juros</button></div><div class="row"><label>Adicionar pessoa (e-mail já criado em Authentication)<input id="me" type="email"></label><button onclick="am()">Adicionar</button></div>`:''}`;
+}
+async function sj(){await run(SB.rpc('set_late_interest',{p_organization_id:ORG,p_pct:+$('#jp').value}));toast('Juros salvos.')}
+async function am(){await run(SB.rpc('add_member_by_email',{p_org:ORG,p_email:$('#me').value,p_role:'member'}));$('#me').value='';toast('Pessoa adicionada.')}
+
+async function vCli(){await cust(1);$('#v').innerHTML=`<div class="row"><label>Buscar<input id="q" oninput="fl()" placeholder="Nome ou apelido"></label><button class="pri" onclick="nc()">Novo cliente</button></div><ul class="ruled" id="lst"></ul>`;fl()}
+function fl(){const q=($('#q')?.value||'').toLowerCase();$('#lst').innerHTML=CU.filter(c=>(c.full_name+' '+(c.nickname||'')).toLowerCase().includes(q)).map(c=>`<li><a onclick="go('fic','${c.id}')"><b>${E(c.nickname||c.full_name)}</b><small>${E(c.nickname?c.full_name:c.address||'')}</small></a></li>`).join('')||'<li class="mut">Nenhum cliente ainda. Toque em Novo cliente.</li>'}
+function nc(){od(`<form onsubmit="sc(event)"><h2>Novo cliente</h2><label>Nome completo<input name="n" required minlength="2"></label><label>Apelido<input name="a"></label><label>WhatsApp com DDD<input name="w" inputmode="tel"></label><label>Endereço<input name="d"></label><div class="row"><button type="button" onclick="dg.close()">Cancelar</button><button class="pri">Salvar cliente</button></div></form>`)}
+async function sc(ev){ev.preventDefault();const f=ev.target,v=n=>f[n].value.trim()||null;await run(SB.from('customers').insert({organization_id:ORG,full_name:f.n.value.trim(),nickname:v('a'),whatsapp:v('w'),address:v('d'),created_by:(await SB.auth.getUser()).data.user.id}));dg.close();toast('Cliente salvo.');go('cli')}
+
+async function vFic(id){
+ const [c,du,ph]=await Promise.all([run(SB.from('customers').select('*').eq('id',id).single()),run(SB.from('installment_dues').select('*').eq('customer_id',id).eq('installment_status','open').gt('balance',0).order('due_date')),run(SB.from('payments').select('id,amount,method,status,received_at').eq('customer_id',id).order('received_at',{ascending:false}).limit(8))]);
+ FD=du;const t=du.reduce((a,x)=>a+ +x.total_to_collect,0),w=wa(c,t);
+ $('#v').innerHTML=`<button class="lk" onclick="go('cli')">Voltar aos clientes</button><section class="hero"><small>${E(c.full_name)}${c.nickname?', '+E(c.nickname):''}</small><strong class="${t?'neg':''}">${R(t)}</strong><div class="sub"><span>${du.length} parcela(s) em aberto, com juros de atraso</span>${w?`<a class="wa" href="${w}" target="_blank" rel="noopener">Cobrar no WhatsApp</a>`:''}</div></section><h2>Parcelas em aberto</h2><ul class="ruled">${du.map((x,i)=>`<li><span><b>${D(x.due_date)}</b><small class="${x.payment_status=='overdue'?'neg':''}">${x.payment_status=='overdue'?x.days_overdue+' dias de atraso, juros de '+R(x.late_interest):'a vencer'}</small></span><span>${R(x.total_to_collect)}</span><button onclick="rc(${i})">Receber</button></li>`).join('')||'<li class="mut">Sem parcelas em aberto.</li>'}</ul><h2>Últimos recebimentos</h2><ul class="ruled">${ph.map(p=>`<li><span>${new Date(p.received_at).toLocaleDateString('pt-BR')}<small>${M[p.method]}${p.status=='reversed'?', estornado':''}</small></span><span>${R(p.amount)}</span>${ADM&&p.status=='confirmed'?`<button onclick="es('${p.id}','${id}')">Estornar</button>`:''}</li>`).join('')||'<li class="mut">Nenhum recebimento ainda.</li>'}</ul>`;
+}
+function rc(i){const x=FD[i],j=+x.late_interest>0&&ADM,v=j?x.total_to_collect:x.balance;od(`<form onsubmit="pay(event,${i})"><h2>Receber parcela de ${D(x.due_date)}</h2><label>Valor recebido (R$)<input name="v" type="number" step="0.01" min="0.01" value="${v}" required></label><label>Forma de pagamento<select name="m">${Object.entries(M).map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select></label>${j?`<label class="chk"><input type="checkbox" name="j" checked>Cobrar juros de atraso (${R(x.late_interest)})</label>`:+x.late_interest>0?'<p class="mut">Só administradores podem cobrar juros de atraso.</p>':''}<div class="row"><button type="button" onclick="dg.close()">Cancelar</button><button class="pri">Confirmar recebimento</button></div></form>`)}
+async function pay(ev,i){ev.preventDefault();const f=ev.target,x=FD[i],b=f.querySelector('.pri');b.disabled=true;
+ try{let bal=+x.balance;
+  if(f.j?.checked){await run(SB.rpc('add_financial_adjustment',{p_organization_id:ORG,p_installment_id:x.installment_id,p_type:'interest',p_amount:+x.late_interest,p_description:'Juros de atraso, '+x.days_overdue+' dias'}));bal+=+x.late_interest}
+  const a=Math.min(+f.v.value,bal);
+  await run(SB.rpc('register_payment_transaction',{p_organization_id:ORG,p_customer_id:x.customer_id,p_amount:a,p_method:f.m.value,p_allocations:[{installment_id:x.installment_id,amount:a}],p_idempotency_key:crypto.randomUUID(),p_notes:null,p_received_at:new Date().toISOString()}));
+  dg.close();toast('Recebimento registrado.');go('fic',x.customer_id)}catch{b.disabled=false}}
+async function es(pid,cid){const m=prompt('Motivo do estorno:');if(!m)return;await run(SB.rpc('reverse_payment',{p_organization_id:ORG,p_payment_id:pid,p_reason:m}));toast('Recebimento estornado.');go('fic',cid)}
+
+async function vVenda(){const cu=await cust();if(!cu.length)return $('#v').innerHTML='<p class="mut">Cadastre um cliente na aba Clientes antes de lançar uma venda.</p>';
+ $('#v').innerHTML=`<form id="sf" onsubmit="vs(event)" oninput="pv()"><label>Cliente<select name="c">${cu.map(c=>`<option value="${c.id}">${E(c.nickname?c.nickname+' ('+c.full_name+')':c.full_name)}</option>`).join('')}</select></label><div class="row"><label>Origem<select name="t"><option value="new">Venda nova</option><option value="legacy_migration">Do caderno antigo</option></select></label><label>Data da venda<input name="sd" type="date" required value="${iso(new Date())}"></label></div><label>Descrição<input name="ds" required placeholder="Ex.: tênis e meias"></label><div class="row"><label>Valor (R$)<input name="v" type="number" step="0.01" min="0.01" required></label><label>Juros do parcelamento (% ao mês)<input name="j" type="number" step="0.01" min="0" value="0"></label></div><div class="row"><label>Parcelas<input name="n" type="number" min="1" max="60" value="1"></label><label>Intervalo<select name="i"><option value="7">Semanal</option><option value="15">Quinzenal</option><option value="m" selected>Mensal</option></select></label><label>1º vencimento<input name="f" type="date" required value="${iso(new Date(Date.now()+30*864e5))}"></label></div><label>Foto da folha do caderno (opcional)<input name="p" type="file" accept="image/*"></label><ul class="ruled" id="pvw"></ul><p><button class="pri">Lançar venda</button></p></form>`;pv()}
+function pl(f){if(!f.f.value)return{tot:0,L:[]};const v=+f.v.value||0,n=Math.max(1,+f.n.value|0),j=+f.j.value||0,tot=Math.round(v*(1+j/100*n)*100)/100,base=Math.floor(tot/n*100)/100,a=new Date(f.f.value+'T12:00'),L=[];
+ for(let k=0;k<n;k++){let d;if(f.i.value=='m'){d=new Date(a.getFullYear(),a.getMonth()+k,1,12);d.setDate(Math.min(a.getDate(),new Date(d.getFullYear(),d.getMonth()+1,0).getDate()))}else d=new Date(a.getTime()+k*f.i.value*864e5);L.push({due_date:iso(d),amount:k<n-1?base:Math.round((tot-base*(n-1))*100)/100})}return{tot,L}}
+function pv(){const {tot,L}=pl($('#sf'));$('#pvw').innerHTML=L.map((x,k)=>`<li><span>Parcela ${k+1}, vence em ${D(x.due_date)}</span><span>${R(x.amount)}</span></li>`).join('')+`<li><b>Total da venda</b><b>${R(tot)}</b></li>`}
+async function vs(ev){ev.preventDefault();const f=ev.target,{tot,L}=pl(f),b=f.querySelector('.pri'),ds=f.ds.value.trim();b.disabled=true;
+ try{const id=await run(SB.rpc('create_sale_transaction',{p_organization_id:ORG,p_customer_id:f.c.value,p_sale_type:f.t.value,p_description:ds,p_sale_date:f.sd.value+'T12:00:00-03:00',p_items:[{description:ds,quantity:1,unit_cost:0,unit_price:tot}],p_installments:L,p_discount:0,p_notes:+f.j.value?'Juros do parcelamento: '+f.j.value+'% ao mês':null}));
+  const p=f.p.files[0];
+  if(p){const path=ORG+'/'+id+'/'+Date.now()+'.jpg',{error}=await SB.storage.from('sale-attachments').upload(path,p,{contentType:p.type});
+   if(error)toast('Venda lançada, mas a foto não foi enviada: '+error.message);else await run(SB.from('sale_attachments').insert({organization_id:ORG,sale_id:id,storage_path:path}))}
+  toast('Venda lançada.');go('fic',f.c.value)}catch{b.disabled=false}}
+SB.auth.onAuthStateChange(e=>{if(e=='SIGNED_OUT')login()});
+boot();
+</script>
+</body>
+</html>
